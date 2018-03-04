@@ -1,4 +1,8 @@
-
+/**
+ NIOUDPEchoServer [port]
+ This starts up a server which will echo anything recieved on the localhost port.  The port can be passed in
+ or will default to 9999.  This is based on the example provided with SwiftNIO except uses UDP instead of TCP
+ */
 import NIO
 
 private final class EchoHandler: ChannelInboundHandler {
@@ -20,6 +24,8 @@ private final class EchoHandler: ChannelInboundHandler {
 }
 
 let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
+
+// Using DatagramBootstrap turns out to be the only significant change between TCP and UDP in this case
 let bootstrap = DatagramBootstrap(group: group)
     .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
     .channelInitializer { channel in
