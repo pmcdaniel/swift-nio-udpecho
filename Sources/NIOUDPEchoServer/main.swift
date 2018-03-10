@@ -6,19 +6,21 @@
 import NIO
 
 private final class EchoHandler: ChannelInboundHandler {
-    typealias InboundIn = ByteBuffer
+    typealias InboundIn = AddressedEnvelope<ByteBuffer>
     
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+        let addressedEnvelope = self.unwrapInboundIn(data)
+        print("Recieved data from \(addressedEnvelope.remoteAddress)")
         ctx.write(data, promise: nil)
     }
-    
+
     public func channelReadComplete(ctx: ChannelHandlerContext) {
         ctx.flush()
     }
-    
+
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         print("error :", error)
-        
+
         ctx.close(promise: nil)
     }
 }
