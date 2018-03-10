@@ -75,6 +75,9 @@ buffer.write(string: line)
 let envelope = AddressedEnvelope(remoteAddress: remoteAddr, data: buffer)
 channel.writeAndFlush(envelope, promise: nil)
 
+// These lines would connect to the UDP socket vs sending the packets into the ether.
+// The advantage being that if an ICMP packet came back about the port not being opened
+// you'd be warned about it
 /*channel.connect(to: remoteAddr).whenComplete {
     var buffer = channel.allocator.buffer(capacity: line.utf8.count)
     buffer.write(string: line)
