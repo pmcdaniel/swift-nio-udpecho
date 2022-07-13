@@ -8,30 +8,30 @@ import NIO
 private final class EchoHandler: ChannelInboundHandler {
     typealias InboundIn = AddressedEnvelope<ByteBuffer>
     
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let addressedEnvelope = self.unwrapInboundIn(data)
         print("Recieved data from \(addressedEnvelope.remoteAddress)")
-        ctx.write(data, promise: nil)
+        context.write(data, promise: nil)
     }
 
-    public func channelReadComplete(ctx: ChannelHandlerContext) {
-        ctx.flush()
+    public func channelReadComplete(context: ChannelHandlerContext) {
+        context.flush()
     }
 
-    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
         print("error :", error)
 
-        ctx.close(promise: nil)
+        context.close(promise: nil)
     }
 }
 
-let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
+let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 
 // Using DatagramBootstrap turns out to be the only significant change between TCP and UDP in this case
 let bootstrap = DatagramBootstrap(group: group)
     .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
     .channelInitializer { channel in
-        channel.pipeline.add(handler: EchoHandler())
+        channel.pipeline.addHandler(EchoHandler())
 }
 defer {
     try! group.syncShutdownGracefully()
@@ -40,7 +40,7 @@ defer {
 let defaultPort = 9999
 
 let arguments = CommandLine.arguments
-let port = arguments.dropFirst().flatMap {Int($0)}.first ?? defaultPort
+let port = arguments.dropFirst().compactMap {Int($0)}.first ?? defaultPort
 
 let channel = try! bootstrap.bind(host: "127.0.0.1", port: port).wait()
 
