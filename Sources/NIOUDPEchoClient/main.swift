@@ -9,30 +9,30 @@ import NIO
 print("Please enter line to send to the server")
 let line = readLine(strippingNewline: true)!
 
-private final class EchoHandler : ChannelInboundHandler {
+private final class EchoInputHandler : ChannelInboundHandler {
     // typealias changes to wrap out ByteBuffer in an AddressedEvelope which describes where the packages are going
     public typealias InboundIn = AddressedEnvelope<ByteBuffer>
     public typealias OutboundOut = AddressedEnvelope<ByteBuffer>
     private var numBytes = 0
     
-    public init(_ expectedNumBytes: Int) {
-        self.numBytes = expectedNumBytes
+    public init(/*_ expectedNumBytes: Int*/) {
+        //self.numBytes = expectedNumBytes
     }
     
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         numBytes -= self.unwrapInboundIn(data).data.readableBytes
         
-        assert(numBytes >= 0)
+        //assert(numBytes >= 0)
         
-        if numBytes == 0 {
+        //if numBytes == 0 {
             print("Received the line back from the server, closing channel")
-            ctx.close(promise: nil)
-        }
+            context.close(promise: nil)
+        //}
     }
     
-    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
         print("error: ", error)
-        ctx.close(promise: nil)
+        context.close(promise: nil)
     }
 }
 
@@ -40,10 +40,10 @@ private final class EchoOutputHandler : ChannelOutboundHandler {
     public typealias OutboundIn = AddressedEnvelope<ByteBuffer>
     
     // The method just grabs the data on the way out and adds the expected input handler
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+    public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let expectedNumBytes = self.unwrapOutboundIn(data).data.readableBytes
-        ctx.channel.pipeline.addHandler(EchoHandler(expectedNumBytes))
-        ctx.write(data, promise: promise)
+        //let result = context.channel.pipeline.addHandler(EchoInputHandler(expectedNumBytes))
+        context.write(data, promise: promise)
 
     }
 }
@@ -55,6 +55,9 @@ let bootstrap = DatagramBootstrap(group: group)
     .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
     .channelInitializer { channel in
         channel.pipeline.addHandler(EchoOutputHandler())
+    .flatMap { _ in channel.pipeline.addHandler(EchoInputHandler())
+    }
+        
 }
 defer {
     try! group.syncShutdownGracefully()
