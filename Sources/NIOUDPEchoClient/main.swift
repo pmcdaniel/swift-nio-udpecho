@@ -42,19 +42,19 @@ private final class EchoOutputHandler : ChannelOutboundHandler {
     // The method just grabs the data on the way out and adds the expected input handler
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let expectedNumBytes = self.unwrapOutboundIn(data).data.readableBytes
-        ctx.channel.pipeline.add(handler: EchoHandler(expectedNumBytes)).whenComplete {
-            ctx.write(data, promise: promise)
-        }
+        ctx.channel.pipeline.addHandler(EchoHandler(expectedNumBytes))
+        ctx.write(data, promise: promise)
+
     }
 }
 
-let group = MultiThreadedEventLoopGroup(numThreads: 1)
+let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
 // Like with the NIOUDPEchoServer we switch to using DatagramBootstrap here instead of ServerBootstrap
 let bootstrap = DatagramBootstrap(group: group)
     .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
     .channelInitializer { channel in
-        channel.pipeline.add(handler: EchoOutputHandler())
+        channel.pipeline.addHandler(EchoOutputHandler())
 }
 defer {
     try! group.syncShutdownGracefully()
@@ -64,14 +64,13 @@ let defaultPort = 9999
 let listenPort = 8888
 
 let arguments = CommandLine.arguments
-let port = arguments.dropFirst().flatMap {Int($0)}.first ?? defaultPort
+let port = arguments.dropFirst().compactMap {Int($0)}.first ?? defaultPort
 
 let channel = try bootstrap.bind(host: "127.0.0.1", port: listenPort).wait()
-let remoteAddr = try SocketAddress.newAddressResolving(host: "127.0.0.1", port: port)
+let remoteAddr = try SocketAddress(ipAddress: "127.0.0.1", port: port)
 
 print("Sending message to \(remoteAddr)")
-var buffer = channel.allocator.buffer(capacity: line.utf8.count)
-buffer.write(string: line)
+var buffer = channel.allocator.buffer(string: line)
 let envelope = AddressedEnvelope(remoteAddress: remoteAddr, data: buffer)
 channel.writeAndFlush(envelope, promise: nil)
 
