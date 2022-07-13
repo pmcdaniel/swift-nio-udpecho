@@ -15,19 +15,19 @@ private final class EchoInputHandler : ChannelInboundHandler {
     public typealias OutboundOut = AddressedEnvelope<ByteBuffer>
     private var numBytes = 0
     
-    public init(/*_ expectedNumBytes: Int*/) {
-        //self.numBytes = expectedNumBytes
+    public init(_ expectedNumBytes: Int) {
+        self.numBytes = expectedNumBytes
     }
     
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         numBytes -= self.unwrapInboundIn(data).data.readableBytes
         
-        //assert(numBytes >= 0)
+        assert(numBytes >= 0)
         
-        //if numBytes == 0 {
+        if numBytes == 0 {
             print("Received the line back from the server, closing channel")
             context.close(promise: nil)
-        //}
+        }
     }
     
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
@@ -42,7 +42,7 @@ private final class EchoOutputHandler : ChannelOutboundHandler {
     // The method just grabs the data on the way out and adds the expected input handler
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let expectedNumBytes = self.unwrapOutboundIn(data).data.readableBytes
-        //let result = context.channel.pipeline.addHandler(EchoInputHandler(expectedNumBytes))
+        let result = context.channel.pipeline.addHandler(EchoInputHandler(expectedNumBytes))
         context.write(data, promise: promise)
 
     }
@@ -53,10 +53,14 @@ let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 // Like with the NIOUDPEchoServer we switch to using DatagramBootstrap here instead of ServerBootstrap
 let bootstrap = DatagramBootstrap(group: group)
     .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+    
     .channelInitializer { channel in
+       channel.pipeline.addHandler(EchoOutputHandler())
+    /* If you want to add both handlers here, use this flatMap
+     .channelInitializer { channel in
         channel.pipeline.addHandler(EchoOutputHandler())
     .flatMap { _ in channel.pipeline.addHandler(EchoInputHandler())
-    }
+    }*/
         
 }
 defer {
